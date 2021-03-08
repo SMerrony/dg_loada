@@ -39,8 +39,10 @@ procedure Loada is
     Verbose        : Boolean := False;
 
     ArgIx          : Integer := 1;
-    DumpFile       : File_Type;
-    DumpFileStream : Stream_Access;
+    Dump_File       : File_Type;
+    Dump_File_Stream : Stream_Access;
+    Write_File       : File_Type;
+    Write_File_Stream : Stream_Access;
 
     -- dump images can legally contain 'too many' directory pops, so we
     -- store the starting directory and never traverse above it...
@@ -71,14 +73,14 @@ procedure Loada is
         Tmp_Blob : Blob_Type (1 .. Num_Bytes);
     begin
         CurrentBufferUse := Reason;
-        Tmp_Blob         := Read_Blob (Num_Bytes, DumpFileStream, Reason);
+        Tmp_Blob         := Read_Blob (Num_Bytes, Dump_File_Stream, Reason);
         for B in 1 .. Num_Bytes loop
             Buffer (B) := Tmp_Blob (B);
         end loop;
         CurrentBufferLen := Num_Bytes;
     end Load_Buffer;
 
-    function ProcessNB (RecHdr : in Record_Header_Type) return Unbounded_String
+    function Process_Name_Block (RecHdr : in Record_Header_Type) return Unbounded_String
     is
         NameBytes : Blob_Type (1 .. RecHdr.RecordLength);
         File_Name, WritePath, DisplayPath : Unbounded_String;
@@ -86,7 +88,7 @@ procedure Loada is
     begin
         NameBytes :=
            Read_Blob
-              (RecHdr.RecordLength, DumpFileStream,
+              (RecHdr.RecordLength, Dump_File_Stream,
                To_Unbounded_String ("File Name"));
         for Ix in 1 .. RecHdr.RecordLength loop
             exit when NameBytes (Ix) = 0;
@@ -133,13 +135,14 @@ procedure Loada is
             if Verbose then
                 Ada.Text_IO.Put (" Creating file: " & To_String (WritePath));
             end if;
-            -- TODO Actually create the file!
+            Create( Write_File, Out_File, To_String (WritePath));
+            Write_File_Stream := Stream (Write_File);
         end if;
 
         return File_Name;
-    end ProcessNB;
+    end Process_Name_Block;
 
-    procedure ProcessDataBlock (RecHdr : in Record_Header_Type) is
+    procedure Process_Data_Block (RecHdr : in Record_Header_Type) is
         DHB       : Data_Header_Type;
         FourBytes : Blob_Type (1 .. 4);
         TwoBytes  : Blob_Type (1 .. 2);
@@ -148,7 +151,7 @@ procedure Loada is
         -- first get the address and length
         FourBytes :=
            Read_Blob
-              (Num_Bytes => 4, Dump_Stream => DumpFileStream,
+              (Num_Bytes => 4, Dump_Stream => Dump_File_Stream,
                Reason    => To_Unbounded_String ("Byte Addr"));
         DHB.ByteAddress := Unsigned_32 (FourBytes (1));
         DHB.ByteAddress :=
@@ -160,7 +163,7 @@ procedure Loada is
 
         FourBytes :=
            Read_Blob
-              (Num_Bytes => 4, Dump_Stream => DumpFileStream,
+              (Num_Bytes => 4, Dump_Stream => Dump_File_Stream,
                Reason    => To_Unbounded_String ("Byte Length"));
         DHB.ByteLength := Unsigned_32 (FourBytes (1));
         DHB.ByteLength :=
@@ -186,7 +189,7 @@ procedure Loada is
 
         TwoBytes :=
            Read_Blob
-              (Num_Bytes => 2, Dump_Stream => DumpFileStream,
+              (Num_Bytes => 2, Dump_Stream => Dump_File_Stream,
                Reason    => To_Unbounded_String ("Alignment Count"));
         DHB.AlignmentCount := Unsigned_16 (TwoBytes (1));
         DHB.AlignmentCount :=
@@ -202,11 +205,11 @@ procedure Loada is
             declare
                 t : Blob_Type (1 .. Integer (DHB.AlignmentCount));
             begin
-                --t := Read_Blob (Num_Bytes => , Dump_Stream => DumpFileStream, Reason => To_Unbounded_String("Alignment"));
+                --t := Read_Blob (Num_Bytes => , Dump_Stream => Dump_File_Stream, Reason => To_Unbounded_String("Alignment"));
                 t :=
                    Read_Blob
                       (Num_Bytes   => Integer (DHB.AlignmentCount),
-                       Dump_Stream => DumpFileStream,
+                       Dump_Stream => Dump_File_Stream,
                        Reason      => To_Unbounded_String ("Alignment"));
             end;
         end if;
@@ -217,7 +220,7 @@ procedure Loada is
             db :=
                Read_Blob
                   (Num_Bytes   => Integer (DHB.ByteLength),
-                   Dump_Stream => DumpFileStream,
+                   Dump_Stream => Dump_File_Stream,
                    Reason      => To_Unbounded_String ("Data Block"));
         end;
 
@@ -244,13 +247,13 @@ procedure Loada is
         TotalFileSize := TotalFileSize + DHB.ByteLength;
         InFile        := True;
 
-    end ProcessDataBlock;
+    end Process_Data_Block;
 
-    procedure ProcessEndBlock is
+    procedure Process_End_Block is
     begin
         if InFile then
             if Extracting and LoadIt then
-                -- TODO Close the file
+                Close (Write_File);
                 null;
             end if;
             if Summary then
@@ -277,7 +280,7 @@ procedure Loada is
         if Verbose then
             Ada.Text_IO.Put_Line ("End Block Processed");
         end if;
-    end ProcessEndBlock;
+    end Process_End_Block;
 
     procedure Process_Link
        (RecHdr : in Record_Header_Type; LinkName : in Unbounded_String)
@@ -286,7 +289,7 @@ procedure Loada is
     begin
         LinkTargetBA :=
            Read_Blob
-              (RecHdr.RecordLength, DumpFileStream,
+              (RecHdr.RecordLength, Dump_File_Stream,
                To_Unbounded_String ("Link Target"));
         -- TODO Create the link
     end Process_Link;
@@ -324,7 +327,7 @@ begin
 
     begin
         Open
-           (File => DumpFile, Mode => In_File,
+           (File => Dump_File, Mode => In_File,
             Name => To_String (DumpFileName));
     exception
         when others =>
@@ -336,10 +339,10 @@ begin
             return;
     end;
 
-    DumpFileStream := Stream (DumpFile);
+    Dump_File_Stream := Stream (Dump_File);
 
     -- There should always be a Start Of Dump record
-    SodRecord := Read_SOD (DumpFileStream);
+    SodRecord := Read_SOD (Dump_File_Stream);
     if Summary or Verbose then
         Ada.Text_IO.Put_Line
            ("Summary of dump file : " & To_String (DumpFileName));
@@ -360,7 +363,7 @@ begin
 
     Process_Each_Block :
     while not Done loop
-        RecHdr := Read_Header (DumpFileStream);
+        RecHdr := Read_Header (Dump_File_Stream);
         if Verbose then
             Ada.Text_IO.Put_Line
                ("Found block of type: " &
@@ -379,7 +382,7 @@ begin
                 FsbTypeIndicator := Integer (Buffer (2));
                 LoadIt           := False;
             when Name_Block_Byte =>
-                FileName := ProcessNB (RecHdr);
+                FileName := Process_Name_Block (RecHdr);
             when UDA_Byte =>
                 -- throw away for now
                 Load_Buffer
@@ -398,9 +401,9 @@ begin
                 -- nothing to do - it's just a record header
                 null;
             when Data_Block_Byte =>
-                ProcessDataBlock (RecHdr);
+                Process_Data_Block (RecHdr);
             when Data_End_Byte =>
-                ProcessEndBlock;
+                Process_End_Block;
             when End_Dump_Byte =>
                 Ada.Text_IO.Put_Line ("=== End of Dump ===");
                 Done := True;
