@@ -31,39 +31,39 @@ procedure Loada is
 
     SemVer : constant String := "v1.4.1";
 
-    DumpFileName   : Unbounded_String;
-    Extracting     : Boolean := False;
-    IgnoringErrors : Boolean := False;
-    Listing        : Boolean := False;
-    Summary        : Boolean := False;
-    Verbose        : Boolean := False;
+    Dump_File_Name  : Unbounded_String;
+    Extracting      : Boolean := False;
+    Ignoring_Errors : Boolean := False;
+    Listing         : Boolean := False;
+    Summary         : Boolean := False;
+    Verbose         : Boolean := False;
 
-    ArgIx          : Integer := 1;
-    Dump_File       : File_Type;
-    Dump_File_Stream : Stream_Access;
-    Write_File       : File_Type;
+    ArgIx             : Integer := 1;
+    Dump_File         : File_Type;
+    Dump_File_Stream  : Stream_Access;
+    Write_File        : File_Type;
     Write_File_Stream : Stream_Access;
 
     -- dump images can legally contain 'too many' directory pops, so we
     -- store the starting directory and never traverse above it...
-    BaseDir    : constant String  := Current_Directory;
-    WorkingDir : Unbounded_String := To_Unbounded_String (BaseDir);
+    Base_Dir    : constant String  := Current_Directory;
+    Working_Dir : Unbounded_String := To_Unbounded_String (Base_Dir);
 
-    Buffer           : array (1 .. MaxBlockSize) of Unsigned_8;
-    CurrentBufferLen : Integer range 0 .. MaxBlockSize;
-    CurrentBufferUse : Unbounded_String;
-    FsbTypeIndicator : Integer;
-    FileName         : Unbounded_String;
+    Buffer              : array (1 .. MaxBlockSize) of Unsigned_8;
+    Current_Buff_Len    : Integer range 0 .. MaxBlockSize;
+    Current_Buff_In_Use : Unbounded_String;
+    FSB_Type_Indicator  : Integer;
+    Current_File_Name   : Unbounded_String;
 
-    SodRecord                  : SOD_Type;
-    RecHdr                     : Record_Header_Type;
-    TotalFileSize, PaddingSize : Unsigned_32 := 0;
-    Done, InFile, LoadIt       : Boolean     := False;
+    SOD                           : SOD_Type;
+    Record_Header                 : Record_Header_Type;
+    Total_File_Size, Padding_Size : Unsigned_32 := 0;
+    Done, In_A_File, Load_It      : Boolean     := False;
 
     procedure Print_Help is
     begin
         Ada.Text_IO.Put
-           ("ERROR: Must specify DUMP file name with -dumpFile <dumpfilename> option");
+           ("ERROR: Must specify DUMP file name with -dumpfile <dump-file-name> option");
         Set_Exit_Status (Failure);
     end Print_Help;
 
@@ -72,49 +72,50 @@ procedure Loada is
     is
         Tmp_Blob : Blob_Type (1 .. Num_Bytes);
     begin
-        CurrentBufferUse := Reason;
-        Tmp_Blob         := Read_Blob (Num_Bytes, Dump_File_Stream, Reason);
+        Current_Buff_In_Use := Reason;
+        Tmp_Blob            := Read_Blob (Num_Bytes, Dump_File_Stream, Reason);
         for B in 1 .. Num_Bytes loop
             Buffer (B) := Tmp_Blob (B);
         end loop;
-        CurrentBufferLen := Num_Bytes;
+        Current_Buff_Len := Num_Bytes;
     end Load_Buffer;
 
-    function Process_Name_Block (RecHdr : in Record_Header_Type) return Unbounded_String
+    function Process_Name_Block
+       (Record_Header : in Record_Header_Type) return Unbounded_String
     is
-        NameBytes : Blob_Type (1 .. RecHdr.RecordLength);
+        NameBytes : Blob_Type (1 .. Record_Header.RecordLength);
         File_Name, WritePath, DisplayPath : Unbounded_String;
         ThisEntryType                     : Fstat_Entry_Rec;
     begin
         NameBytes :=
            Read_Blob
-              (RecHdr.RecordLength, Dump_File_Stream,
+              (Record_Header.RecordLength, Dump_File_Stream,
                To_Unbounded_String ("File Name"));
-        for Ix in 1 .. RecHdr.RecordLength loop
+        for Ix in 1 .. Record_Header.RecordLength loop
             exit when NameBytes (Ix) = 0;
             Append (File_Name, Character'Val (NameBytes (Ix)));
         end loop;
         if Summary and Verbose then
             Ada.Text_IO.Put_Line ("");
         end if;
-        ThisEntryType := Known_Fstat_Entry_Types (FsbTypeIndicator);
+        ThisEntryType := Known_Fstat_Entry_Types (FSB_Type_Indicator);
         if ThisEntryType.Desc /= "UNKN" then
-            LoadIt := ThisEntryType.HasPayload;
+            Load_It := ThisEntryType.HasPayload;
             if ThisEntryType.IsDir then
-                WorkingDir := WorkingDir & "/" & File_Name;
+                Working_Dir := Working_Dir & "/" & File_Name;
                 if Extracting then
-                    Create_Directory (To_String (WorkingDir));
+                    Create_Directory (To_String (Working_Dir));
                 end if;
             end if;
         else
-            LoadIt := True;
+            Load_It := True;
         end if;
 
         if Summary then
-            if WorkingDir = "" then
+            if Working_Dir = "" then
                 DisplayPath := File_Name;
             else
-                DisplayPath := WorkingDir & "/" & File_Name;
+                DisplayPath := Working_Dir & "/" & File_Name;
             end if;
             Ada.Text_IO.Put
                (To_String (ThisEntryType.Desc) & "   " &
@@ -126,27 +127,26 @@ procedure Loada is
             end if;
         end if;
 
-        if Extracting and LoadIt then
-            if WorkingDir = "" then
+        if Extracting and Load_It then
+            if Working_Dir = "" then
                 WritePath := File_Name;
             else
-                WritePath := WorkingDir & "/" & File_Name;
+                WritePath := Working_Dir & "/" & File_Name;
             end if;
             if Verbose then
                 Ada.Text_IO.Put (" Creating file: " & To_String (WritePath));
             end if;
-            Create( Write_File, Out_File, To_String (WritePath));
+            Create (Write_File, Out_File, To_String (WritePath));
             Write_File_Stream := Stream (Write_File);
         end if;
 
         return File_Name;
     end Process_Name_Block;
 
-    procedure Process_Data_Block (RecHdr : in Record_Header_Type) is
+    procedure Process_Data_Block (Record_Header : in Record_Header_Type) is
         DHB       : Data_Header_Type;
         FourBytes : Blob_Type (1 .. 4);
         TwoBytes  : Blob_Type (1 .. 2);
-        DataBlob  : Blob_Type (1 .. Aosvs_Dump.MaxBlockSize);
     begin
         -- first get the address and length
         FourBytes :=
@@ -215,61 +215,67 @@ procedure Loada is
         end if;
 
         declare
-            db : Blob_Type (1 .. Integer (DHB.ByteLength));
+            Data_Blob : Blob_Type (1 .. Integer (DHB.ByteLength));
         begin
-            db :=
+            Data_Blob :=
                Read_Blob
                   (Num_Bytes   => Integer (DHB.ByteLength),
                    Dump_Stream => Dump_File_Stream,
                    Reason      => To_Unbounded_String ("Data Block"));
+
+            -- large areas of NULLs may be skipped over by DUMP_II/III
+            -- this is achieved by simply advancing the byte address so
+            -- we must pad out if byte address is beyond end of last block
+
+            if DHB.ByteAddress > (Total_File_Size + 1) then
+                Padding_Size := DHB.ByteAddress - Total_File_Size;
+                if Extracting then
+                    if Verbose then
+                        Ada.Text_IO.Put_Line ("  Padding with one block");
+                    end if;
+                    declare
+                        Padding_Blob : Blob_Type (1 .. Integer (Padding_Size));
+                    begin
+                        for B in Padding_Blob'Range loop
+                            Padding_Blob (B) := 0;
+                        end loop;
+                        Blob_Type'Write (Write_File_Stream, Padding_Blob);
+                    end;
+                end if;
+                Total_File_Size := Total_File_Size + Padding_Size;
+            end if;
+
+            if Extracting then
+                Blob_Type'Write (Write_File_Stream, Data_Blob);
+            end if;
         end;
 
-        -- large areas of NULLs may be skipped over by DUMP_II/III
-        -- this is achieved by simply advancing the byte address so
-        -- we must pad out if byte address is beyond end of last block
-
-        if DHB.ByteAddress > (TotalFileSize + 1) then
-            PaddingSize := DHB.ByteAddress - TotalFileSize;
-            if Extracting then
-                if Verbose then
-                    Ada.Text_IO.Put_Line ("  Padding with one block");
-                end if;
-                -- TODO Write the padding block
-            end if;
-            TotalFileSize := TotalFileSize + PaddingSize;
-        end if;
-
-        if Extracting then
-            -- TODO Write out the Blob_Type
-            null;
-        end if;
-
-        TotalFileSize := TotalFileSize + DHB.ByteLength;
-        InFile        := True;
+        Total_File_Size := Total_File_Size + DHB.ByteLength;
+        In_A_File       := True;
 
     end Process_Data_Block;
 
     procedure Process_End_Block is
     begin
-        if InFile then
-            if Extracting and LoadIt then
+        if In_A_File then
+            if Extracting and Load_It then
                 Close (Write_File);
                 null;
             end if;
             if Summary then
                 Ada.Text_IO.Put_Line
-                   (" " & Unsigned_32'Image (TotalFileSize) & " bytes");
+                   (" " & Unsigned_32'Image (Total_File_Size) & " bytes");
             end if;
-            TotalFileSize := 0;
-            InFile        := False;
+            Total_File_Size := 0;
+            In_A_File       := False;
         else
-            if WorkingDir /= BaseDir then -- Don't go up from start dir
+            if Working_Dir /= Base_Dir then -- Don't go up from start dir
                 declare
                     lastSlash : Natural :=
                        Ada.Strings.Unbounded.Index
-                          (WorkingDir, "/", Ada.Strings.Backward);
+                          (Working_Dir, "/", Ada.Strings.Backward);
                 begin
-                    WorkingDir := Head (WorkingDir, lastSlash - 1);
+                    Working_Dir := Head (Working_Dir, lastSlash - 1);
                 end;
                 if Verbose then
                     Ada.Text_IO.Put_Line (" Popped dir - new dir is: ");
@@ -283,13 +289,13 @@ procedure Loada is
     end Process_End_Block;
 
     procedure Process_Link
-       (RecHdr : in Record_Header_Type; LinkName : in Unbounded_String)
+       (Record_Header : in Record_Header_Type; LinkName : in Unbounded_String)
     is
-        LinkTargetBA : Blob_Type (1 .. RecHdr.RecordLength);
+        LinkTargetBA : Blob_Type (1 .. Record_Header.RecordLength);
     begin
         LinkTargetBA :=
            Read_Blob
-              (RecHdr.RecordLength, Dump_File_Stream,
+              (Record_Header.RecordLength, Dump_File_Stream,
                To_Unbounded_String ("Link Target"));
         -- TODO Create the link
     end Process_Link;
@@ -302,12 +308,12 @@ begin
 
     while ArgIx <= Argument_Count loop
         if Argument (ArgIx) = "-dumpfile" then
-            DumpFileName := To_Unbounded_String (Argument (ArgIx + 1));
-            ArgIx        := ArgIx + 1;
+            Dump_File_Name := To_Unbounded_String (Argument (ArgIx + 1));
+            ArgIx          := ArgIx + 1;
         elsif Argument (ArgIx) = "-extract" then
             Extracting := True;
         elsif Argument (ArgIx) = "-ignoreErrors" then
-            IgnoringErrors := True;
+            Ignoring_Errors := True;
         elsif Argument (ArgIx) = "-list" then
             Listing := True;
         elsif Argument (ArgIx) = "-summary" then
@@ -328,12 +334,12 @@ begin
     begin
         Open
            (File => Dump_File, Mode => In_File,
-            Name => To_String (DumpFileName));
+            Name => To_String (Dump_File_Name));
     exception
         when others =>
             Ada.Text_IO.Put_Line
                (Ada.Text_IO.Standard_Error,
-                "ERROR: Cannot open the file '" & To_String (DumpFileName) &
+                "ERROR: Cannot open the file '" & To_String (Dump_File_Name) &
                 "'. Does it exist?");
             Set_Exit_Status (Failure);
             return;
@@ -342,35 +348,33 @@ begin
     Dump_File_Stream := Stream (Dump_File);
 
     -- There should always be a Start Of Dump record
-    SodRecord := Read_SOD (Dump_File_Stream);
+    SOD := Read_SOD (Dump_File_Stream);
     if Summary or Verbose then
         Ada.Text_IO.Put_Line
-           ("Summary of dump file : " & To_String (DumpFileName));
+           ("Summary of dump file : " & To_String (Dump_File_Name));
         Ada.Text_IO.Put_Line
            ("AOS/VS dump version  : " &
-            Unsigned_16'Image (SodRecord.DumpFormatRevision));
+            Unsigned_16'Image (SOD.DumpFormatRevision));
         Ada.Text_IO.Put_Line
-           ("Dump date (y - m - d): " &
-            Unsigned_16'Image (SodRecord.DumpTimeYear) & " -" &
-            Unsigned_16'Image (SodRecord.DumpTimeMonth) & " -" &
-            Unsigned_16'Image (SodRecord.DumpTimeDay));
+           ("Dump date (y - m - d): " & Unsigned_16'Image (SOD.DumpTimeYear) &
+            " -" & Unsigned_16'Image (SOD.DumpTimeMonth) & " -" &
+            Unsigned_16'Image (SOD.DumpTimeDay));
         Ada.Text_IO.Put_Line
-           ("Dump time (h : m : s): " &
-            Unsigned_16'Image (SodRecord.DumpTimeHours) & " :" &
-            Unsigned_16'Image (SodRecord.DumpTimeMins) & " :" &
-            Unsigned_16'Image (SodRecord.DumpTimeSecs));
+           ("Dump time (h : m : s): " & Unsigned_16'Image (SOD.DumpTimeHours) &
+            " :" & Unsigned_16'Image (SOD.DumpTimeMins) & " :" &
+            Unsigned_16'Image (SOD.DumpTimeSecs));
     end if;
 
     Process_Each_Block :
     while not Done loop
-        RecHdr := Read_Header (Dump_File_Stream);
+        Record_Header := Read_Header (Dump_File_Stream);
         if Verbose then
             Ada.Text_IO.Put_Line
                ("Found block of type: " &
-                Unsigned_8'Image (RecHdr.RecordType) & ", Length: " &
-                Integer'Image (RecHdr.RecordLength));
+                Unsigned_8'Image (Record_Header.RecordType) & ", Length: " &
+                Integer'Image (Record_Header.RecordLength));
         end if;
-        case RecHdr.RecordType is
+        case Record_Header.RecordType is
             when Start_Dump_Byte =>
                 Ada.Text_IO.Put_Line
                    (Ada.Text_IO.Standard_Error,
@@ -378,30 +382,33 @@ begin
                 Set_Exit_Status (Failure);
                 Abort_Task (Current_Task);
             when FSB_Byte =>
-                Load_Buffer (RecHdr.RecordLength, To_Unbounded_String ("FSB"));
-                FsbTypeIndicator := Integer (Buffer (2));
-                LoadIt           := False;
+                Load_Buffer
+                   (Record_Header.RecordLength, To_Unbounded_String ("FSB"));
+                FSB_Type_Indicator := Integer (Buffer (2));
+                Load_It            := False;
             when Name_Block_Byte =>
-                FileName := Process_Name_Block (RecHdr);
+                Current_File_Name := Process_Name_Block (Record_Header);
             when UDA_Byte =>
                 -- throw away for now
                 Load_Buffer
-                   (RecHdr.RecordLength,
-                    To_Unbounded_String ("UDA")); -- TODO Check this is OK
+                   (Record_Header.RecordLength,
+                    To_Unbounded_String
+                       ("UDA")); -- TODO Check this is OK
             when ACL_Byte =>
                 -- We don't do anything except report ACLs at the moment
-                Load_Buffer (RecHdr.RecordLength, To_Unbounded_String ("ACL"));
+                Load_Buffer
+                   (Record_Header.RecordLength, To_Unbounded_String ("ACL"));
                 if Verbose then
                     Ada.Text_IO.Put_Line
                        (" ACL: "); -- & Unsigned_8'Image(Buffer));
                 end if;
             when Link_Byte =>
-                Process_Link (RecHdr, FileName);
+                Process_Link (Record_Header, Current_File_Name);
             when Data_Start_Byte =>
                 -- nothing to do - it's just a record header
                 null;
             when Data_Block_Byte =>
-                Process_Data_Block (RecHdr);
+                Process_Data_Block (Record_Header);
             when Data_End_Byte =>
                 Process_End_Block;
             when End_Dump_Byte =>
@@ -411,7 +418,8 @@ begin
                 Ada.Text_IO.Put_Line
                    (Ada.Text_IO.Standard_Error,
                     "ERROR: Unknown block type: " &
-                    Unsigned_8'Image (RecHdr.RecordType) & " Giving up.");
+                    Unsigned_8'Image (Record_Header.RecordType) &
+                    " Giving up.");
                 Set_Exit_Status (Failure);
                 Abort_Task (Current_Task);
         end case;
