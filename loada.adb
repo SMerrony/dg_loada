@@ -83,25 +83,25 @@ procedure Loada is
     function Process_Name_Block
        (Record_Header : in Record_Header_Type) return Unbounded_String
     is
-        NameBytes : Blob_Type (1 .. Record_Header.RecordLength);
-        File_Name, WritePath, DisplayPath : Unbounded_String;
-        ThisEntryType                     : Fstat_Entry_Rec;
+        Name_Bytes : Blob_Type (1 .. Record_Header.Record_Length);
+        File_Name, Write_Path, Display_Path : Unbounded_String;
+        This_Entry_Type                     : Fstat_Entry_Rec;
     begin
-        NameBytes :=
+        Name_Bytes :=
            Read_Blob
-              (Record_Header.RecordLength, Dump_File_Stream,
+              (Record_Header.Record_Length, Dump_File_Stream,
                To_Unbounded_String ("File Name"));
-        for Ix in 1 .. Record_Header.RecordLength loop
-            exit when NameBytes (Ix) = 0;
-            Append (File_Name, Character'Val (NameBytes (Ix)));
+        for Ix in 1 .. Record_Header.Record_Length loop
+            exit when Name_Bytes (Ix) = 0;
+            Append (File_Name, Character'Val (Name_Bytes (Ix)));
         end loop;
         if Summary and Verbose then
             Ada.Text_IO.Put_Line ("");
         end if;
-        ThisEntryType := Known_Fstat_Entry_Types (FSB_Type_Indicator);
-        if ThisEntryType.Desc /= "UNKN" then
-            Load_It := ThisEntryType.HasPayload;
-            if ThisEntryType.IsDir then
+        This_Entry_Type := Known_Fstat_Entry_Types (FSB_Type_Indicator);
+        if This_Entry_Type.Desc /= "UNKN" then
+            Load_It := This_Entry_Type.Has_Payload;
+            if This_Entry_Type.Is_Dir then
                 Working_Dir := Working_Dir & "/" & File_Name;
                 if Extracting then
                     Create_Directory (To_String (Working_Dir));
@@ -113,14 +113,14 @@ procedure Loada is
 
         if Summary then
             if Working_Dir = "" then
-                DisplayPath := File_Name;
+                Display_Path := File_Name;
             else
-                DisplayPath := Working_Dir & "/" & File_Name;
+                Display_Path := Working_Dir & "/" & File_Name;
             end if;
             Ada.Text_IO.Put
-               (To_String (ThisEntryType.Desc) & "   " &
-                To_String (DisplayPath));
-            if Verbose or ThisEntryType.IsDir then
+               (To_String (This_Entry_Type.Desc) & "   " &
+                To_String (Display_Path));
+            if Verbose or This_Entry_Type.Is_Dir then
                 Ada.Text_IO.Put_Line ("");
             else
                 Ada.Text_IO.Put ("   ");
@@ -129,14 +129,14 @@ procedure Loada is
 
         if Extracting and Load_It then
             if Working_Dir = "" then
-                WritePath := File_Name;
+                Write_Path := File_Name;
             else
-                WritePath := Working_Dir & "/" & File_Name;
+                Write_Path := Working_Dir & "/" & File_Name;
             end if;
             if Verbose then
-                Ada.Text_IO.Put (" Creating file: " & To_String (WritePath));
+                Ada.Text_IO.Put (" Creating file: " & To_String (Write_Path));
             end if;
-            Create (Write_File, Out_File, To_String (WritePath));
+            Create (Write_File, Out_File, To_String (Write_Path));
             Write_File_Stream := Stream (Write_File);
         end if;
 
@@ -153,27 +153,27 @@ procedure Loada is
            Read_Blob
               (Num_Bytes => 4, Dump_Stream => Dump_File_Stream,
                Reason    => To_Unbounded_String ("Byte Addr"));
-        DHB.ByteAddress := Unsigned_32 (FourBytes (1));
-        DHB.ByteAddress :=
-           Shift_Left (DHB.ByteAddress, 8) + Unsigned_32 (FourBytes (2));
-        DHB.ByteAddress :=
-           Shift_Left (DHB.ByteAddress, 8) + Unsigned_32 (FourBytes (3));
-        DHB.ByteAddress :=
-           Shift_Left (DHB.ByteAddress, 8) + Unsigned_32 (FourBytes (4));
+        DHB.Byte_Address := Unsigned_32 (FourBytes (1));
+        DHB.Byte_Address :=
+           Shift_Left (DHB.Byte_Address, 8) + Unsigned_32 (FourBytes (2));
+        DHB.Byte_Address :=
+           Shift_Left (DHB.Byte_Address, 8) + Unsigned_32 (FourBytes (3));
+        DHB.Byte_Address :=
+           Shift_Left (DHB.Byte_Address, 8) + Unsigned_32 (FourBytes (4));
 
         FourBytes :=
            Read_Blob
               (Num_Bytes => 4, Dump_Stream => Dump_File_Stream,
                Reason    => To_Unbounded_String ("Byte Length"));
-        DHB.ByteLength := Unsigned_32 (FourBytes (1));
-        DHB.ByteLength :=
-           Shift_Left (DHB.ByteLength, 8) + Unsigned_32 (FourBytes (2));
-        DHB.ByteLength :=
-           Shift_Left (DHB.ByteLength, 8) + Unsigned_32 (FourBytes (3));
-        DHB.ByteLength :=
-           Shift_Left (DHB.ByteLength, 8) + Unsigned_32 (FourBytes (4));
+        DHB.Byte_Length := Unsigned_32 (FourBytes (1));
+        DHB.Byte_Length :=
+           Shift_Left (DHB.Byte_Length, 8) + Unsigned_32 (FourBytes (2));
+        DHB.Byte_Length :=
+           Shift_Left (DHB.Byte_Length, 8) + Unsigned_32 (FourBytes (3));
+        DHB.Byte_Length :=
+           Shift_Left (DHB.Byte_Length, 8) + Unsigned_32 (FourBytes (4));
 
-        if DHB.ByteLength > Unsigned_32 (MaxBlockSize) then
+        if DHB.Byte_Length > Unsigned_32 (MaxBlockSize) then
             Ada.Text_IO.Put_Line
                (Ada.Text_IO.Standard_Error,
                 "ERROR: Maximum Block Size Exceeded.");
@@ -183,7 +183,7 @@ procedure Loada is
 
         if Verbose then
             Ada.Text_IO.Put_Line
-               (" Data block: " & Unsigned_32'Image (DHB.ByteLength) &
+               (" Data block: " & Unsigned_32'Image (DHB.Byte_Length) &
                 " (bytes)");
         end if;
 
@@ -191,35 +191,35 @@ procedure Loada is
            Read_Blob
               (Num_Bytes => 2, Dump_Stream => Dump_File_Stream,
                Reason    => To_Unbounded_String ("Alignment Count"));
-        DHB.AlignmentCount := Unsigned_16 (TwoBytes (1));
-        DHB.AlignmentCount :=
-           Shift_Left (DHB.AlignmentCount, 8) + Unsigned_16 (TwoBytes (2));
+        DHB.Alighnment_Count := Unsigned_16 (TwoBytes (1));
+        DHB.Alighnment_Count :=
+           Shift_Left (DHB.Alighnment_Count, 8) + Unsigned_16 (TwoBytes (2));
 
         -- skip any alignment bytes - usually just one
-        if DHB.AlignmentCount /= 0 then
+        if DHB.Alighnment_Count /= 0 then
             if Verbose then
                 Ada.Text_IO.Put_Line
-                   ("  Skipping " & Unsigned_16'Image (DHB.AlignmentCount) &
+                   ("  Skipping " & Unsigned_16'Image (DHB.Alighnment_Count) &
                     " alignment byte(s)");
             end if;
             declare
-                t : Blob_Type (1 .. Integer (DHB.AlignmentCount));
+                t : Blob_Type (1 .. Integer (DHB.Alighnment_Count));
             begin
                 --t := Read_Blob (Num_Bytes => , Dump_Stream => Dump_File_Stream, Reason => To_Unbounded_String("Alignment"));
                 t :=
                    Read_Blob
-                      (Num_Bytes   => Integer (DHB.AlignmentCount),
+                      (Num_Bytes   => Integer (DHB.Alighnment_Count),
                        Dump_Stream => Dump_File_Stream,
                        Reason      => To_Unbounded_String ("Alignment"));
             end;
         end if;
 
         declare
-            Data_Blob : Blob_Type (1 .. Integer (DHB.ByteLength));
+            Data_Blob : Blob_Type (1 .. Integer (DHB.Byte_Length));
         begin
             Data_Blob :=
                Read_Blob
-                  (Num_Bytes   => Integer (DHB.ByteLength),
+                  (Num_Bytes   => Integer (DHB.Byte_Length),
                    Dump_Stream => Dump_File_Stream,
                    Reason      => To_Unbounded_String ("Data Block"));
 
@@ -227,8 +227,8 @@ procedure Loada is
             -- this is achieved by simply advancing the byte address so
             -- we must pad out if byte address is beyond end of last block
 
-            if DHB.ByteAddress > (Total_File_Size + 1) then
-                Padding_Size := DHB.ByteAddress - Total_File_Size;
+            if DHB.Byte_Address > (Total_File_Size + 1) then
+                Padding_Size := DHB.Byte_Address - Total_File_Size;
                 if Extracting then
                     if Verbose then
                         Ada.Text_IO.Put_Line ("  Padding with one block");
@@ -250,7 +250,7 @@ procedure Loada is
             end if;
         end;
 
-        Total_File_Size := Total_File_Size + DHB.ByteLength;
+        Total_File_Size := Total_File_Size + DHB.Byte_Length;
         In_A_File       := True;
 
     end Process_Data_Block;
@@ -291,11 +291,11 @@ procedure Loada is
     procedure Process_Link
        (Record_Header : in Record_Header_Type; LinkName : in Unbounded_String)
     is
-        LinkTargetBA : Blob_Type (1 .. Record_Header.RecordLength);
+        LinkTargetBA : Blob_Type (1 .. Record_Header.Record_Length);
     begin
         LinkTargetBA :=
            Read_Blob
-              (Record_Header.RecordLength, Dump_File_Stream,
+              (Record_Header.Record_Length, Dump_File_Stream,
                To_Unbounded_String ("Link Target"));
         -- TODO Create the link
     end Process_Link;
@@ -354,15 +354,17 @@ begin
            ("Summary of dump file : " & To_String (Dump_File_Name));
         Ada.Text_IO.Put_Line
            ("AOS/VS dump version  : " &
-            Unsigned_16'Image (SOD.DumpFormatRevision));
+            Unsigned_16'Image (SOD.Dump_Format_Version));
         Ada.Text_IO.Put_Line
-           ("Dump date (y - m - d): " & Unsigned_16'Image (SOD.DumpTimeYear) &
-            " -" & Unsigned_16'Image (SOD.DumpTimeMonth) & " -" &
-            Unsigned_16'Image (SOD.DumpTimeDay));
+           ("Dump date (y - m - d): " &
+            Unsigned_16'Image (SOD.Dump_Time_Year) & " -" &
+            Unsigned_16'Image (SOD.Dump_Time_Month) & " -" &
+            Unsigned_16'Image (SOD.Dump_Time_Day));
         Ada.Text_IO.Put_Line
-           ("Dump time (h : m : s): " & Unsigned_16'Image (SOD.DumpTimeHours) &
-            " :" & Unsigned_16'Image (SOD.DumpTimeMins) & " :" &
-            Unsigned_16'Image (SOD.DumpTimeSecs));
+           ("Dump time (h : m : s): " &
+            Unsigned_16'Image (SOD.Dump_Time_Hours) & " :" &
+            Unsigned_16'Image (SOD.Dump_Time_Mins) & " :" &
+            Unsigned_16'Image (SOD.Dump_Time_Secs));
     end if;
 
     Process_Each_Block :
@@ -371,10 +373,10 @@ begin
         if Verbose then
             Ada.Text_IO.Put_Line
                ("Found block of type: " &
-                Unsigned_8'Image (Record_Header.RecordType) & ", Length: " &
-                Integer'Image (Record_Header.RecordLength));
+                Unsigned_8'Image (Record_Header.Record_Type) & ", Length: " &
+                Integer'Image (Record_Header.Record_Length));
         end if;
-        case Record_Header.RecordType is
+        case Record_Header.Record_Type is
             when Start_Dump_Byte =>
                 Ada.Text_IO.Put_Line
                    (Ada.Text_IO.Standard_Error,
@@ -383,7 +385,7 @@ begin
                 Abort_Task (Current_Task);
             when FSB_Byte =>
                 Load_Buffer
-                   (Record_Header.RecordLength, To_Unbounded_String ("FSB"));
+                   (Record_Header.Record_Length, To_Unbounded_String ("FSB"));
                 FSB_Type_Indicator := Integer (Buffer (2));
                 Load_It            := False;
             when Name_Block_Byte =>
@@ -391,13 +393,13 @@ begin
             when UDA_Byte =>
                 -- throw away for now
                 Load_Buffer
-                   (Record_Header.RecordLength,
+                   (Record_Header.Record_Length,
                     To_Unbounded_String
                        ("UDA")); -- TODO Check this is OK
             when ACL_Byte =>
                 -- We don't do anything except report ACLs at the moment
                 Load_Buffer
-                   (Record_Header.RecordLength, To_Unbounded_String ("ACL"));
+                   (Record_Header.Record_Length, To_Unbounded_String ("ACL"));
                 if Verbose then
                     Ada.Text_IO.Put_Line
                        (" ACL: "); -- & Unsigned_8'Image(Buffer));
@@ -418,7 +420,7 @@ begin
                 Ada.Text_IO.Put_Line
                    (Ada.Text_IO.Standard_Error,
                     "ERROR: Unknown block type: " &
-                    Unsigned_8'Image (Record_Header.RecordType) &
+                    Unsigned_8'Image (Record_Header.Record_Type) &
                     " Giving up.");
                 Set_Exit_Status (Failure);
                 Abort_Task (Current_Task);

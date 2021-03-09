@@ -35,10 +35,10 @@ package Aosvs_Dump is
    MaxBlockSize : constant Integer := 32_768;
 
    type Fstat_Entry_Rec is record
-      DgMnemonic : String (1 .. 4);
-      Desc       : Unbounded_String;
-      IsDir      : Boolean;
-      HasPayload : Boolean;
+      DG_Mnemonic : String (1 .. 4);
+      Desc        : Unbounded_String;
+      Is_Dir      : Boolean;
+      Has_Payload : Boolean;
    end record;
 
    type Known_Types is array (0 .. 87) of Fstat_Entry_Rec;
@@ -61,26 +61,26 @@ package Aosvs_Dump is
       others => ("UNKN", To_Unbounded_String ("Unknown"), False, False));
 
    type Record_Header_Type is record
-      RecordType   : Unsigned_8;
-      RecordLength : Natural;
+      Record_Type   : Unsigned_8;
+      Record_Length : Natural;
    end record;
 
    type Data_Header_Type is record
-      DataHeader     : Record_Header_Type;
-      ByteAddress    : Unsigned_32;
-      ByteLength     : Unsigned_32;
-      AlignmentCount : Unsigned_16;
+      Header           : Record_Header_Type;
+      Byte_Address     : Unsigned_32;
+      Byte_Length      : Unsigned_32;
+      Alighnment_Count : Unsigned_16;
    end record;
 
    type SOD_Type is record
-      Header             : Record_Header_Type;
-      DumpFormatRevision : Unsigned_16;
-      DumpTimeSecs       : Unsigned_16;
-      DumpTimeMins       : Unsigned_16;
-      DumpTimeHours      : Unsigned_16;
-      DumpTimeDay        : Unsigned_16;
-      DumpTimeMonth      : Unsigned_16;
-      DumpTimeYear       : Unsigned_16;
+      Header              : Record_Header_Type;
+      Dump_Format_Version : Unsigned_16;
+      Dump_Time_Secs      : Unsigned_16;
+      Dump_Time_Mins      : Unsigned_16;
+      Dump_Time_Hours     : Unsigned_16;
+      Dump_Time_Day       : Unsigned_16;
+      Dump_Time_Month     : Unsigned_16;
+      Dump_Time_Year      : Unsigned_16;
    end record;
 
    type Blob_Type is array (Positive range <>) of Unsigned_8;

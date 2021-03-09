@@ -33,7 +33,7 @@ package body Aosvs_Dump is
 
     function Read_Blob
        (Num_Bytes : in Positive; Dump_Stream : Stream_Access;
-        Reason  : in Unbounded_String) return Blob_Type
+        Reason    : in Unbounded_String) return Blob_Type
     is
         Blob : Blob_Type (1 .. Num_Bytes);
     begin
@@ -42,16 +42,18 @@ package body Aosvs_Dump is
         return Blob;
     end Read_Blob;
 
-    function Read_Header (Dump_Stream : Stream_Access) return Record_Header_Type is
+    function Read_Header
+       (Dump_Stream : Stream_Access) return Record_Header_Type
+    is
         Hdr          : Record_Header_Type;
         Byte1, Byte2 : Unsigned_8;
     begin
         Unsigned_8'Read (Dump_Stream, Byte1);
         -- the record type is 6-bit
-        Hdr.RecordType   := Shift_Right (Byte1, 2);
-        Hdr.RecordLength := Integer (Byte1 and 2#0000_0011#) * 256;
+        Hdr.Record_Type   := Shift_Right (Byte1, 2);
+        Hdr.Record_Length := Integer (Byte1 and 2#0000_0011#) * 256;
         Unsigned_8'Read (Dump_Stream, Byte2);
-        Hdr.RecordLength := Hdr.RecordLength + Integer (Byte2);
+        Hdr.Record_Length := Hdr.Record_Length + Integer (Byte2);
         return Hdr;
     end Read_Header;
 
@@ -59,20 +61,20 @@ package body Aosvs_Dump is
         SOD : SOD_Type;
     begin
         SOD.Header := Read_Header (Dump_Stream);
-        if SOD.Header.RecordType /= Start_Dump_Byte then
+        if SOD.Header.Record_Type /= Start_Dump_Byte then
             Ada.Text_IO.Put_Line
                (Ada.Text_IO.Standard_Error,
                 "ERROR: This does not appear to be an AOS/VS DUMP_II/III file");
             Set_Exit_Status (Failure);
             Abort_Task (Current_Task);
         end if;
-        SOD.DumpFormatRevision := Read_Word (Dump_Stream);
-        SOD.DumpTimeSecs       := Read_Word (Dump_Stream);
-        SOD.DumpTimeMins       := Read_Word (Dump_Stream);
-        SOD.DumpTimeHours      := Read_Word (Dump_Stream);
-        SOD.DumpTimeDay        := Read_Word (Dump_Stream);
-        SOD.DumpTimeMonth      := Read_Word (Dump_Stream);
-        SOD.DumpTimeYear       := Read_Word (Dump_Stream);
+        SOD.Dump_Format_Version := Read_Word (Dump_Stream);
+        SOD.Dump_Time_Secs      := Read_Word (Dump_Stream);
+        SOD.Dump_Time_Mins      := Read_Word (Dump_Stream);
+        SOD.Dump_Time_Hours     := Read_Word (Dump_Stream);
+        SOD.Dump_Time_Day       := Read_Word (Dump_Stream);
+        SOD.Dump_Time_Month     := Read_Word (Dump_Stream);
+        SOD.Dump_Time_Year      := Read_Word (Dump_Stream);
         return SOD;
     end Read_SOD;
 
