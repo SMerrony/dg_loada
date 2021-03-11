@@ -15,6 +15,7 @@
 -- WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 -- SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+with Ada.Characters.Handling;
 with Ada.Command_Line;        use Ada.Command_Line;
 with Ada.Task_Identification; use Ada.Task_Identification;
 with Ada.Text_IO;
@@ -77,5 +78,28 @@ package body Aosvs_Dump is
         SOD.Dump_Time_Year      := Read_Word (Dump_Stream);
         return SOD;
     end Read_SOD;
+
+    function Extract_First_String(Blob : Blob_Type) return Unbounded_String is
+        Str : Unbounded_String;
+    begin
+        for Ix in Blob'Range loop
+            exit when Blob (Ix) = 0;
+            Append (Str, Character'Val (Blob (Ix)));
+        end loop;
+        return Str;
+    end Extract_First_String;
+
+    -- Convert to upper-case and replace ":" directory seps with "/"
+    function To_Linux_Filename (Aosvs_Filename : Unbounded_String) return Unbounded_String is
+        str : String := To_String(Aosvs_Filename);
+    begin
+        str := Ada.Characters.Handling.To_Upper (str);
+        for C in str'Range loop
+           if str(C) = ':' then
+              str(C) := '/';
+            end if;
+        end loop;
+        return To_Unbounded_String (str);
+    end To_Linux_Filename;
 
 end Aosvs_Dump;

@@ -58,7 +58,7 @@ package Aosvs_Dump is
       69     => ("FLOG", To_Unbounded_String ("System Log File"), False, True),
       74     => ("FPRV", To_Unbounded_String ("Program File"), False, True),
       87     => ("FPRG", To_Unbounded_String ("Program File"), False, True),
-      others => ("UNKN", To_Unbounded_String ("Unknown"), False, False));
+      others => ("UNKN", To_Unbounded_String ("Unknown"), False, True));
 
    type Record_Header_Type is record
       Record_Type   : Unsigned_8;
@@ -89,8 +89,10 @@ package Aosvs_Dump is
    function Read_Blob
      (Num_Bytes : in Positive; Dump_Stream : Stream_Access;
       Reason    : in Unbounded_String) return Blob_Type;
+   function Extract_First_String(Blob : Blob_Type) return Unbounded_String;
    function Read_Header
      (Dump_Stream : Stream_Access) return Record_Header_Type;
    function Read_SOD (Dump_Stream : Stream_Access) return SOD_Type;
+   function To_Linux_Filename (Aosvs_Filename : Unbounded_String) return Unbounded_String;
 
 end Aosvs_Dump;

@@ -42,7 +42,6 @@ procedure Loada is
     Dump_File         : File_Type;
     Dump_File_Stream  : Stream_Access;
     Write_File        : File_Type;
-    Write_File_Stream : Stream_Access;
 
     -- dump images can legally contain 'too many' directory pops, so we
     -- store the starting directory and never traverse above it...
@@ -59,6 +58,9 @@ procedure Loada is
     Record_Header                 : Record_Header_Type;
     Total_File_Size, Padding_Size : Unsigned_32 := 0;
     Done, In_A_File, Load_It      : Boolean     := False;
+
+    function symlink (fname, linkname : String) return Integer;
+    pragma Import (C, symlink);
 
     procedure Print_Help is
     begin
@@ -91,24 +93,19 @@ procedure Loada is
            Read_Blob
               (Record_Header.Record_Length, Dump_File_Stream,
                To_Unbounded_String ("File Name"));
-        for Ix in 1 .. Record_Header.Record_Length loop
-            exit when Name_Bytes (Ix) = 0;
-            Append (File_Name, Character'Val (Name_Bytes (Ix)));
-        end loop;
+        File_Name := Extract_First_String (Name_Bytes);
+        File_Name := To_Linux_Filename (File_Name);
         if Summary and Verbose then
             Ada.Text_IO.Put_Line ("");
         end if;
         This_Entry_Type := Known_Fstat_Entry_Types (FSB_Type_Indicator);
-        if This_Entry_Type.Desc /= "UNKN" then
-            Load_It := This_Entry_Type.Has_Payload;
-            if This_Entry_Type.Is_Dir then
-                Working_Dir := Working_Dir & "/" & File_Name;
-                if Extracting then
-                    Create_Directory (To_String (Working_Dir));
-                end if;
+
+        Load_It := This_Entry_Type.Has_Payload;
+        if This_Entry_Type.Is_Dir then
+            Working_Dir := Working_Dir & "/" & File_Name;
+            if Extracting then
+                Create_Directory (To_String (Working_Dir));
             end if;
-        else
-            Load_It := True;
         end if;
 
         if Summary then
@@ -137,7 +134,7 @@ procedure Loada is
                 Ada.Text_IO.Put (" Creating file: " & To_String (Write_Path));
             end if;
             Create (Write_File, Out_File, To_String (Write_Path));
-            Write_File_Stream := Stream (Write_File);
+            -- Ada.Text_IO.Put_Line ("DEBUG: Output file created" );
         end if;
 
         return File_Name;
@@ -239,14 +236,15 @@ procedure Loada is
                         for B in Padding_Blob'Range loop
                             Padding_Blob (B) := 0;
                         end loop;
-                        Blob_Type'Write (Write_File_Stream, Padding_Blob);
+                        Blob_Type'Write (Stream(Write_File), Padding_Blob);
                     end;
                 end if;
                 Total_File_Size := Total_File_Size + Padding_Size;
             end if;
 
             if Extracting then
-                Blob_Type'Write (Write_File_Stream, Data_Blob);
+            --    Ada.Text_IO.Put_Line("Writing " & Unsigned_32'Image(DHB.Byte_Length) & " bytes...");
+               Blob_Type'Write (Stream(Write_File), Data_Blob);
             end if;
         end;
 
@@ -260,11 +258,10 @@ procedure Loada is
         if In_A_File then
             if Extracting and Load_It then
                 Close (Write_File);
-                null;
+                -- Ada.Text_IO.Put_Line ("DEBUG: File Closed");
             end if;
             if Summary then
-                Ada.Text_IO.Put_Line
-                   (" " & Unsigned_32'Image (Total_File_Size) & " bytes");
+                Ada.Text_IO.Put_Line (" " & Unsigned_32'Image (Total_File_Size) & " bytes");
             end if;
             Total_File_Size := 0;
             In_A_File       := False;
@@ -289,17 +286,38 @@ procedure Loada is
     end Process_End_Block;
 
     procedure Process_Link
-       (Record_Header : in Record_Header_Type; LinkName : in Unbounded_String)
+       (Record_Header : in Record_Header_Type; Link_Name : in Unbounded_String)
     is
-        LinkTargetBA : Blob_Type (1 .. Record_Header.Record_Length);
+        Link_Target_Blob : Blob_Type (1 .. Record_Header.Record_Length);
+        Link_Target      : Unbounded_String;
     begin
-        LinkTargetBA :=
+        Link_Target_Blob :=
            Read_Blob
               (Record_Header.Record_Length, Dump_File_Stream,
                To_Unbounded_String ("Link Target"));
-        -- TODO Create the link
+        Link_Target := Extract_First_String (Link_Target_Blob);
+        Link_Target := To_Linux_Filename (Link_Target);
+        if Summary or Verbose then
+            Ada.Text_IO.Put_Line (" -> Link Target: " & To_String (Link_Target));
+        end if;
+        if Extracting then
+            declare
+               RC : Integer;
+               Target_Str : String := To_String (Link_Target) & ASCII.Nul;
+               Link_Str   : String := To_String( Working_Dir ) & "/" & 
+                                        To_String (Link_Name) & ASCII.Nul;
+            begin
+               RC := symlink (Target_Str, Link_Str);
+               if RC /= 0 then
+                  Ada.Text_IO.Put_Line ("ERROR: Could not create symbolic link");
+               end if;
+            end;
+        end if;
     end Process_Link;
 
+------------------
+-- main program --
+------------------
 begin
     if Argument_Count = 0 then
         Print_Help;
