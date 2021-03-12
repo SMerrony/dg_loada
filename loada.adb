@@ -65,20 +65,13 @@ procedure Loada is
    procedure Print_Help is
    begin
       Ada.Text_IO.Put_Line ("Usage of loada:" );
-      Ada.Text_IO.Put_Line ("  -dumpfile string" );
-      Ada.Text_IO.Put_Line ("   DUMP_II or DUMP_III file to read/load (required)" );
-      Ada.Text_IO.Put_Line ("  -extract" );
-      Ada.Text_IO.Put_Line ("   extract the files from the DUMP_II/III into the current directory" );
-      Ada.Text_IO.Put_Line ("  -ignoreErrors" );
-      Ada.Text_IO.Put_Line ("   do not exit if a file or link cannot be created" );
-      Ada.Text_IO.Put_Line ("  -list" );
-      Ada.Text_IO.Put_Line ("   list the contents of the DUMP_II/III file" );
-      Ada.Text_IO.Put_Line ("  -summary" );
-      Ada.Text_IO.Put_Line ("   concise summary of the DUMP_II/III file contents (default true)" );
-      Ada.Text_IO.Put_Line ("  -verbose" );
-      Ada.Text_IO.Put_Line ("   be rather wordy about what loada is doing" );
-      Ada.Text_IO.Put_Line ("  -version" );
-      Ada.Text_IO.Put_Line ("   show the version number of loada and exit" );
+      Ada.Text_IO.Put_Line ("  -dumpfile <file>  DUMP_II or DUMP_III file to read/load (required)" );
+      Ada.Text_IO.Put_Line ("  -extract          extract the files from the DUMP_II/III into the current directory" );
+      Ada.Text_IO.Put_Line ("  -ignoreErrors     do not exit if a file or link cannot be created" );
+      Ada.Text_IO.Put_Line ("  -list             list the contents of the DUMP_II/III file" );
+      Ada.Text_IO.Put_Line ("  -summary          concise summary of the DUMP_II/III file contents (default true)" );
+      Ada.Text_IO.Put_Line ("  -verbose          be rather wordy about what loada is doing" );
+      Ada.Text_IO.Put_Line ("  -version          show the version number of loada and exit" );
 
       Set_Exit_Status (Failure);
    end Print_Help;
