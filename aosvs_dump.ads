@@ -1,4 +1,4 @@
--- Copyright 2021 S.Merrony
+-- Copyright 2021,2022 S.Merrony
 
 -- Permission is hereby granted, free of charge, to any person obtaining a copy of this software
 -- and associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -86,12 +86,9 @@ package Aosvs_Dump is
    type Blob_Type is array (Positive range <>) of Unsigned_8;
 
    function Read_Word (Dump_Stream : Stream_Access) return Unsigned_16;
-   function Read_Blob
-     (Num_Bytes : in Positive; Dump_Stream : Stream_Access;
-      Reason    : in Unbounded_String) return Blob_Type;
-   function Extract_First_String(Blob : Blob_Type) return Unbounded_String;
-   function Read_Header
-     (Dump_Stream : Stream_Access) return Record_Header_Type;
+   function Read_Blob (Num_Bytes : Positive; Dump_Stream : Stream_Access; Reason : String) return Blob_Type;
+   function Extract_First_String (Blob : Blob_Type) return Unbounded_String;
+   function Read_Header (Dump_Stream : Stream_Access) return Record_Header_Type;
    function Read_SOD (Dump_Stream : Stream_Access) return SOD_Type;
    function To_Linux_Filename (Aosvs_Filename : Unbounded_String) return Unbounded_String;
 

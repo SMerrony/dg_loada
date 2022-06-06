@@ -1,4 +1,4 @@
--- Copyright 2021 S.Merrony
+-- Copyright 2021.2022 S.Merrony
 
 -- Permission is hereby granted, free of charge, to any person obtaining a copy of this software
 -- and associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -33,9 +33,11 @@ package body Aosvs_Dump is
     end Read_Word;
 
     function Read_Blob
-       (Num_Bytes : in Positive; Dump_Stream : Stream_Access;
-        Reason    : in Unbounded_String) return Blob_Type
+       (Num_Bytes   : Positive; 
+        Dump_Stream : Stream_Access;
+        Reason      : String) return Blob_Type
     is
+        pragma Unreferenced(Reason);
         Blob : Blob_Type (1 .. Num_Bytes);
     begin
         -- Ada.Text_IO.Put_Line ("DEBUG: Read_Blob called for bytes: " & Integer'Image(Num_Bytes));
