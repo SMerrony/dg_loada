@@ -10,7 +10,7 @@ project loada is
                                        "-gnata", 
                                        "-gnateE", 
                                        "-gnatwa", 
-                                       "-O0" 
+                                       "-Og" 
                                        );
          when "release" =>
             for Switches ("Ada")

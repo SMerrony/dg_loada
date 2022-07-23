@@ -31,7 +31,7 @@ with Aosvs_Dump; use Aosvs_Dump;
 
 procedure Loada is
 
-   SemVer : constant String := "v1.4.2";
+   SemVer : constant String := "1.4.3"; -- TODO Update SemVer on each release
 
    Dump_File_Name  : Unbounded_String;
    Extracting      : Boolean := False;
