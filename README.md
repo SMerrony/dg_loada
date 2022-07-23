@@ -1,6 +1,6 @@
 # loada
 
-`loada` loads (restores) legacy Data General AOS/VS DUMP_II, and maybe DUMP_III, files on any modern system supported by Ada (gnat).
+`loada` loads (restores) legacy Data General AOS/VS DUMP_II, and maybe DUMP_III, files on any modern Unix-like system supported by GNAT Ada.
 
 It can be used to rescue data from legacy AOS/VS systems if the dumps are accessible on a modern system.  
 
@@ -37,3 +37,4 @@ To extract the contents of a dump `./loada -dumpfile ACK.DMP -extract`
  * Link files will be created as symbolic links
  * ACLs (file permissions) are ignored
  * `loada` will not traverse above the current directory (this was legal in AOS/VS dumps) 
+ * Will not build on Windows due to lack of symlinks

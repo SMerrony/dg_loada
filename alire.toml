@@ -13,3 +13,7 @@ website = "https://github.com/SMerrony/dg_loada"
 tags = ["legacy", "recovering-data", "dg", "data-general", "aos-vs"]
 
 executables = ["dg_loada"]
+
+[available.'case(os)']
+windows = false
+'...'   = true
