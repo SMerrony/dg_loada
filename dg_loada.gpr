@@ -1,0 +1,22 @@
+with "config/dg_loada_config.gpr";
+project Dg_Loada is
+
+   for Source_Dirs use ("src/", "config/");
+   for Object_Dir use "obj/" & Dg_Loada_Config.Build_Profile;
+   for Create_Missing_Dirs use "True";
+   for Exec_Dir use "bin";
+   for Main use ("dg_loada.adb");
+
+   package Compiler is
+      for Default_Switches ("Ada") use Dg_Loada_Config.Ada_Compiler_Switches;
+   end Compiler;
+
+   package Binder is
+      for Switches ("Ada") use ("-Es"); --  Symbolic traceback
+   end Binder;
+
+   package Install is
+      for Artifacts (".") use ("share");
+   end Install;
+
+end Dg_Loada;

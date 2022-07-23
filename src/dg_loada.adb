@@ -1,19 +1,19 @@
--- Copyright 2021,2022 S.Merrony
+--  Copyright 2021,2022 S.Merrony
 
--- Permission is hereby granted, free of charge, to any person obtaining a copy of this software
--- and associated documentation files (the "Software"), to deal in the Software without restriction,
--- including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
--- and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
--- subject to the following conditions:
+--  Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+--  and associated documentation files (the "Software"), to deal in the Software without restriction,
+--  including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+--  and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+--  subject to the following conditions:
 
--- The above copyright notice and this permission notice shall be included in all copies or substantial
--- portions of the Software.
+--  The above copyright notice and this permission notice shall be included in all copies or substantial
+--  portions of the Software.
 
--- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
--- LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
--- IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
--- WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
--- SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+--  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+--  LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+--  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+--  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+--  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 with Ada.Command_Line;        use Ada.Command_Line;
 with Ada.Directories;         use Ada.Directories;
@@ -29,15 +29,15 @@ with Interfaces; use Interfaces;
 
 with Aosvs_Dump; use Aosvs_Dump;
 
-procedure Loada is
+procedure Dg_Loada is
 
-   SemVer : constant String := "1.4.3"; -- TODO Update SemVer on each release
+   SemVer : constant String := "1.4.3"; --  TODO Update SemVer on each release
 
    Dump_File_Name  : Unbounded_String;
    Extracting      : Boolean := False;
    Ignoring_Errors : Boolean := False;
    Listing         : Boolean := False;
-   Summary         : Boolean := true;
+   Summary         : Boolean := True;
    Verbose         : Boolean := False;
 
    ArgIx             : Integer := 1;
@@ -45,8 +45,8 @@ procedure Loada is
    Dump_File_Stream  : Stream_Access;
    Write_File        : File_Type;
 
-   -- dump images can legally contain 'too many' directory pops, so we
-   -- store the starting directory and never traverse above it...
+   --  dump images can legally contain 'too many' directory pops, so we
+   --  store the starting directory and never traverse above it...
    Base_Dir    : constant String  := Current_Directory;
    Working_Dir : Unbounded_String := To_Unbounded_String (Base_Dir);
 
@@ -61,20 +61,20 @@ procedure Loada is
    File_Count                    : Natural     := 0;
 
    Cannot_Create_Link : exception;
-   
+
    function symlink (fname, linkname : String) return Integer;
    pragma Import (C, symlink);
 
    procedure Print_Help is
    begin
-      Ada.Text_IO.Put_Line ("Usage of loada:" );
-      Ada.Text_IO.Put_Line ("  -dumpfile <file>  DUMP_II or DUMP_III file to read/load (required)" );
-      Ada.Text_IO.Put_Line ("  -extract          extract the files from the DUMP_II/III into the current directory" );
-      Ada.Text_IO.Put_Line ("  -ignoreErrors     do not exit if a file or link cannot be created" );
-      Ada.Text_IO.Put_Line ("  -list             list the contents of the DUMP_II/III file" );
-      Ada.Text_IO.Put_Line ("  -summary          concise summary of the DUMP_II/III file contents (default true)" );
-      Ada.Text_IO.Put_Line ("  -verbose          be rather wordy about what loada is doing" );
-      Ada.Text_IO.Put_Line ("  -version          show the version number of loada and exit" );
+      Ada.Text_IO.Put_Line ("Usage of dg_loada:");
+      Ada.Text_IO.Put_Line ("  -dumpfile <file>  DUMP_II or DUMP_III file to read/load (required)");
+      Ada.Text_IO.Put_Line ("  -extract          extract the files from the DUMP_II/III into the current directory");
+      Ada.Text_IO.Put_Line ("  -ignoreErrors     do not exit if a file or link cannot be created");
+      Ada.Text_IO.Put_Line ("  -list             list the contents of the DUMP_II/III file");
+      Ada.Text_IO.Put_Line ("  -summary          concise summary of the DUMP_II/III file contents (default true)");
+      Ada.Text_IO.Put_Line ("  -verbose          be rather wordy about what dg_loada is doing");
+      Ada.Text_IO.Put_Line ("  -version          show the version number of dg_loada and exit");
 
       Set_Exit_Status (Failure);
    end Print_Help;
@@ -121,7 +121,7 @@ procedure Loada is
          Ada.Text_IO.Put
            (To_String (This_Entry_Type.Desc) & "   " &
               To_String (Display_Path));
-         if Verbose or This_Entry_Type.Is_Dir then
+         if Verbose or else This_Entry_Type.Is_Dir then
             Ada.Text_IO.Put_Line ("");
          else
             Ada.Text_IO.Put ("   ");
@@ -140,7 +140,7 @@ procedure Loada is
             Ada.Text_IO.Put_Line (" Creating file: " & To_String (Write_Path));
          end if;
          Create (Write_File, Out_File, To_String (Write_Path));
-         -- Ada.Text_IO.Put_Line ("DEBUG: Output file created" );
+         --  Ada.Text_IO.Put_Line ("DEBUG: Output file created" );
       end if;
 
       return File_Name;
@@ -151,7 +151,7 @@ procedure Loada is
       FourBytes : Blob_Type (1 .. 4);
       TwoBytes  : Blob_Type (1 .. 2);
    begin
-      -- first get the address and length
+      --  first get the address and length
       FourBytes := Read_Blob (4, Dump_File_Stream, "Byte Addr");
       DHB.Byte_Address := Unsigned_32 (FourBytes (1));
       DHB.Byte_Address :=
@@ -189,7 +189,7 @@ procedure Loada is
       DHB.Alighnment_Count :=
         Shift_Left (DHB.Alighnment_Count, 8) + Unsigned_16 (TwoBytes (2));
 
-      -- skip any alignment bytes - usually just one
+      --  skip any alignment bytes - usually just one
       if DHB.Alighnment_Count /= 0 then
          if Verbose then
             Ada.Text_IO.Put_Line
@@ -208,9 +208,9 @@ procedure Loada is
       begin
          Data_Blob := Read_Blob (Integer (DHB.Byte_Length), Dump_File_Stream, "Data Block");
 
-         -- large areas of NULLs may be skipped over by DUMP_II/III
-         -- this is achieved by simply advancing the byte address so
-         -- we must pad out if byte address is beyond end of last block
+         --  large areas of NULLs may be skipped over by DUMP_II/III
+         --  this is achieved by simply advancing the byte address so
+         --  we must pad out if byte address is beyond end of last block
 
          if DHB.Byte_Address > (Total_File_Size + 1) then
             Padding_Size := DHB.Byte_Address - Total_File_Size;
@@ -224,15 +224,15 @@ procedure Loada is
                   for B in Padding_Blob'Range loop
                      Padding_Blob (B) := 0;
                   end loop;
-                  Blob_Type'Write (Stream(Write_File), Padding_Blob);
+                  Blob_Type'Write (Stream (Write_File), Padding_Blob);
                end;
             end if;
             Total_File_Size := Total_File_Size + Padding_Size;
          end if;
 
          if Extracting then
-            --    Ada.Text_IO.Put_Line("Writing " & Unsigned_32'Image(DHB.Byte_Length) & " bytes...");
-            Blob_Type'Write (Stream(Write_File), Data_Blob);
+            --     Ada.Text_IO.Put_Line("Writing " & Unsigned_32'Image(DHB.Byte_Length) & " bytes...");
+            Blob_Type'Write (Stream (Write_File), Data_Blob);
          end if;
       end;
 
@@ -256,7 +256,7 @@ procedure Loada is
          Total_File_Size := 0;
          In_A_File       := False;
       else
-         if Working_Dir /= Base_Dir then -- Don't go up from start dir
+         if Working_Dir /= Base_Dir then --  Don't go up from start dir
             declare lastSlash : constant Natural := Ada.Strings.Unbounded.Index (Working_Dir, "/", Ada.Strings.Backward);
             begin
                Working_Dir := Head (Working_Dir, lastSlash - 1);
@@ -286,9 +286,9 @@ procedure Loada is
       if Extracting then
          declare
             RC : Integer;
-            Target_Str : constant String := To_String (Link_Target) & ASCII.Nul;
-            Link_Str   : constant String := To_String( Working_Dir ) & "/" & 
-              To_String (Link_Name) & ASCII.Nul;
+            Target_Str : constant String := To_String (Link_Target) & ASCII.NUL;
+            Link_Str   : constant String := To_String (Working_Dir) & "/" &
+              To_String (Link_Name) & ASCII.NUL;
          begin
             RC := symlink (Target_Str, Link_Str);
             if RC /= 0 then
@@ -302,7 +302,7 @@ procedure Loada is
    end Process_Link;
 
    ------------------
-   -- main program --
+   --  main program --
    ------------------
 begin
    if Argument_Count = 0 then
@@ -325,11 +325,11 @@ begin
       elsif Argument (ArgIx) = "-verbose" then
          Verbose := True;
       elsif Argument (ArgIx) = "-version" then
-         Ada.Text_IO.Put ("loada version " & SemVer);
+         Ada.Text_IO.Put ("dg_loada version " & SemVer);
          return;
       else
          Ada.Text_IO.Put_Line
-           ("Ada.Text_IO.Standard_Error, ERROR: Invalid option specified");
+           (Ada.Text_IO.Standard_Error, "ERROR: Invalid option specified");
          Print_Help;
          return;
       end if;
@@ -352,7 +352,7 @@ begin
 
    Dump_File_Stream := Stream (Dump_File);
 
-   -- There should always be a Start Of Dump record
+   --  There should always be a Start Of Dump record
    SOD := Read_SOD (Dump_File_Stream);
    if Summary or Verbose then
       Ada.Text_IO.Put_Line
@@ -395,19 +395,19 @@ begin
          when Name_Block_Byte =>
             Current_File_Name := Process_Name_Block (Record_Header);
          when UDA_Byte =>
-            -- throw away for now
-            Load_Buffer (Record_Header.Record_Length, "UDA"); -- TODO Check this is OK
+            --  throw away for now
+            Load_Buffer (Record_Header.Record_Length, "UDA"); --  TODO Check this is OK
          when ACL_Byte =>
-            -- We don't do anything except report ACLs at the moment
+            --  We don't do anything except report ACLs at the moment
             Load_Buffer (Record_Header.Record_Length, "ACL");
             if Verbose then
                Ada.Text_IO.Put_Line
-                 (" ACL: "); -- & Unsigned_8'Image(Buffer));
+                 (" ACL: "); --  & Unsigned_8'Image(Buffer));
             end if;
          when Link_Byte =>
             Process_Link (Record_Header, Current_File_Name);
          when Data_Start_Byte =>
-            -- nothing to do - it's just a record header
+            --  nothing to do - it's just a record header
             null;
          when Data_Block_Byte =>
             Process_Data_Block;
@@ -432,9 +432,9 @@ begin
 
 exception
    when E : others =>
-      Ada.Text_IO.Put ("Unexpected Error: ");
-      Ada.Text_IO.Put_Line (Ada.Exceptions.Exception_Message (E));
-      Ada.Text_IO.Put_Line (GNAT.Traceback.Symbolic.Symbolic_Traceback (E));
+      Ada.Text_IO.Put (Ada.Text_IO.Standard_Error, "Unexpected Error: ");
+      Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error, Ada.Exceptions.Exception_Message (E));
+      Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error, GNAT.Traceback.Symbolic.Symbolic_Traceback (E));
       raise;
 
-end Loada;
+end Dg_Loada;

@@ -1,4 +1,7 @@
 /.vscode
 /loada
 /obj
-/testdata
+/testdata/obj/
+/bin/
+/alire/
+/config/
